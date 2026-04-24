@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blackwood: El Legado de las Sombras</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,600;1,400&family=Special+Elite&display=swap');
+
+        :root {
+            --bg-color: #020617;
+            --accent-color: #94a3b8;
+            --danger: #991b1b;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: #f1f5f9;
+            font-family: 'Crimson Pro', serif;
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Efecto de Lluvia en el fondo */
+        .rain {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background: linear-gradient(to bottom, rgba(2,6,23,0.9), rgba(2,6,23,1));
+        }
+
+        .drop {
+            position: absolute;
+            background: rgba(255,255,255,0.1);
+            width: 1px;
+            height: 50px;
+            top: -100px;
+            animation: fall 0.8s linear infinite;
+        }
+
+        @keyframes fall {
+            to { transform: translateY(110vh); }
+        }
+
+        /* Contenedor Principal */
+        #game-container {
+            position: relative;
+            z-index: 10;
+            max-width: 500px;
+            margin: 0 auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border-left: 1px solid #1e293b;
+            border-right: 1px solid #1e293b;
+        }
+
+        .visual-area {
+            height: 35vh;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5rem;
+            position: relative;
+            border-bottom: 2px solid #1e293b;
+        }
+
+        .visual-overlay {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 50%;
+            background: linear-gradient(transparent, rgba(15, 23, 42, 1));
+        }
+
+        /* Estilo de Botones */
+        .choice-btn {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid #334155;
+            padding: 1rem;
+            text-align: left;
+            border-radius: 0.5rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .choice-btn:hover {
+            background: #334155;
+            border-color: #64748b;
+            transform: translateX(5px);
+        }
+
+        .choice-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Teclado Numérico para Puzles */
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 200px;
+            margin: 20px auto;
+        }
+
+        .key {
+            background: #1e293b;
+            padding: 15px;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Animaciones */
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="rain" id="rain-layer"></div>
+
+    <div id="game-container">
+        <!-- Header -->
+        <header class="p-4 flex justify-between items-center border-b border-slate-800">
+            <div>
+                <h1 class="text-xs uppercase tracking-widest text-slate-500 font-bold">Investigación Activa</h1>
+                <p id="location-name" class="text-sm font-semibold text-slate-200 italic">Cargando...</p>
+            </div>
+            <div id="inventory" class="flex gap-2"></div>
+        </header>
+
+        <!-- Área Visual -->
+        <div class="visual-area">
+            <span id="visual-emoji" class="fade-in">🏰</span>
+            <div class="visual-overlay"></div>
+        </div>
+
+        <!-- Texto Historia -->
+        <div class="flex-grow p-6 overflow-y-auto">
+            <div id="story-box" class="space-y-4">
+                <p id="main-text" class="text-lg leading-relaxed text-slate-300"></p>
+                <div id="puzzle-area" class="hidden">
+                    <!-- Aquí se inyectan minijuegos -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Acciones -->
+        <div id="choices-container" class="p-4 grid gap-3 border-t border-slate-800 bg-slate-950/50">
+            <!-- Botones dinámicos -->
+        </div>
+
+        <!-- Status Bar -->
+        <div id="status-bar" class="p-3 text-[10px] uppercase tracking-tighter text-center text-slate-600 border-t border-slate-900">
+            Blackwood Case File #402 • Motor de Narrativa v2.5
+        </div>
+    </div>
+
+<script>
+    // Configuración Inicial
+    const state = {
+        location: 'vestibulo',
+        inventory: new Set(),
+        flags: {
+            cajaFuerteAbierta: false,
+            mayordomoInterrogado: false,
+            vistoCuchillo: false
+        },
+        puzzleInput: ""
+    };
+
+    const scenes = {
+        vestibulo: {
+            name: "Vestíbulo Principal",
+            emoji: "🏰",
+            text: "El aire huele a madera vieja y ozono. Un rayo ilumina el salón. El gran reloj de péndulo marca las 12, pero el segundero tiembla violentamente. Hay tres caminos: el estudio del Conde, la cocina de servicio o la gran biblioteca.",
+            choices: [
+                { text: "Ir al Estudio", target: "estudio", icon: "🚪" },
+                { text: "Ir a la Biblioteca", target: "biblioteca", icon: "📚" },
+                { text: "Bajar a la Cocina", target: "cocina", icon: "🍳" }
+            ]
+        },
+        estudio: {
+            name: "Estudio del Conde",
+            emoji: "🍷",
+            text: "Un lugar sobrio. Sobre el escritorio hay una copa de vino a medio terminar y una caja fuerte empotrada en la pared. Una mancha roja en la alfombra parece demasiado oscura para ser vino.",
+            choices: [
+                { text: "Examinar Caja Fuerte", target: "puzzle_caja", icon: "🔐" },
+                { text: "Investigar la mancha", target: "mancha", icon: "🔍" },
+                { text: "Volver al vestíbulo", target: "vestibulo", icon: "⬅️" }
+            ]
+        },
+        puzzle_caja: {
+            name: "Caja Fuerte",
+            emoji: "🔢",
+            text: "La caja requiere un código de 4 dígitos. Hay una pequeña inscripción rayada en el lateral: 'El año del cuadro'.",
+            isPuzzle: "keypad",
+            solution: "1892",
+            onSolve: () => {
+                state.flags.cajaFuerteAbierta = true;
+                addItem("Testamento Real");
+            },
+            choices: [
+                { text: "Dejar la caja", target: "estudio", icon: "⬅️" }
+            ]
+        },
+        mancha: {
+            name: "La Alfombra",
+            emoji: "🩸",
+            text: "No es vino. Es sangre fresca. Sigue un rastro que se pierde bajo la estantería de libros.",
+            onEnter: () => state.flags.vistoCuchillo = true,
+            choices: [
+                { text: "Seguir el rastro", target: "pasadizo", icon: "👣" },
+                { text: "Volver al escritorio", target: "estudio", icon: "⬅️" }
+            ]
+        },
+        biblioteca: {
+            name: "Gran Biblioteca",
+            emoji: "📖",
+            text: "Paredes infinitas de libros. Un cuadro gigante del Conde Blackwood domina la estancia. En el marco inferior hay una fecha grabada: '1892'.",
+            choices: [
+                { text: "Mirar el cuadro", target: "cuadro_detalle", icon: "🖼️" },
+                { text: "Volver al vestíbulo", target: "vestibulo", icon: "⬅️" }
+            ]
+        },
+        cuadro_detalle: {
+            name: "Detalle del Cuadro",
+            emoji: "🖼️",
+            text: "El Conde parece señalar hacia su estudio. El año 1892 brilla bajo la luz de tu linterna.",
+            choices: [
+                { text: "Anotar la fecha e ir al estudio", target: "estudio", icon: "📝" },
+                { text: "Volver", target: "biblioteca", icon: "⬅️" }
+            ]
+        },
+        cocina: {
+            name: "Cocina Sombría",
+            emoji: "🔪",
+            text: "El mayordomo está limpiando un cuchillo de plata. Se detiene en seco al verte. Sus manos tiemblan ligeramente.",
+            choices: [
+                { text: "Interrogar al Mayordomo", target: "interrogatorio", icon: "❓" },
+                { text: "Subir al vestíbulo", target: "vestibulo", icon: "⬅️" }
+            ]
+        },
+        interrogatorio: {
+            name: "Cuestionamiento",
+            emoji: "👨‍💼",
+            text: "—'¿Se le ofrece algo, detective? El Conde está... indispuesto'— dice con voz gélida. Notas que le falta un gemelo en la manga derecha.",
+            onEnter: () => state.flags.mayordomoInterrogado = true,
+            choices: [
+                { text: "Preguntar por la mancha del estudio", target: "acusacion_previa", icon: "🩸" },
+                { text: "Regresar", target: "cocina", icon: "⬅️" }
+            ]
+        },
+        acusacion_previa: {
+            name: "Tensión",
+            emoji: "⚡",
+            text: "El mayordomo se pone pálido. '¿Sangre? No sé de qué habla'. Si tienes pruebas suficientes, podrías confrontarlo.",
+            condition: () => state.inventory.has("Testamento Real") && state.flags.vistoCuchillo,
+            targetIfTrue: "final_victoria",
+            choices: [
+                { text: "Necesito más pruebas...", target: "cocina", icon: "⬅️" }
+            ]
+        },
+        final_victoria: {
+            name: "Caso Cerrado",
+            emoji: "⚖️",
+            text: "Presentas el Testamento donde el Conde te nombraba albacea y el rastro de sangre. El mayordomo confiesa: intentó ocultar el testamento para quedarse con la mansión. ¡Has ganado!",
+            choices: [{ text: "Reiniciar Misterio", target: "vestibulo", isReset: true, icon: "🔄" }]
+        }
+    };
+
+    // Lógica del Motor
+    function render() {
+        const scene = scenes[state.location];
+        
+        // UI Básica
+        document.getElementById('location-name').textContent = scene.name;
+        document.getElementById('visual-emoji').textContent = scene.emoji;
+        
+        const mainText = document.getElementById('main-text');
+        mainText.classList.remove('fade-in');
+        void mainText.offsetWidth;
+        mainText.classList.add('fade-in');
+        mainText.textContent = scene.text;
+
+        // Puzles
+        const puzzleArea = document.getElementById('puzzle-area');
+        if (scene.isPuzzle === "keypad") {
+            puzzleArea.classList.remove('hidden');
+            renderKeypad(scene);
+        } else {
+            puzzleArea.classList.add('hidden');
+        }
+
+        // Botones
+        const choicesContainer = document.getElementById('choices-container');
+        choicesContainer.innerHTML = '';
+
+        scene.choices.forEach(c => {
+            if (c.condition && !c.condition()) return;
+            
+            const btn = document.createElement('button');
+            btn.className = "choice-btn";
+            btn.innerHTML = `<span>${c.icon}</span> <span>${c.text}</span>`;
+            btn.onclick = () => {
+                if (c.isReset) resetGame();
+                state.location = c.targetIfTrue && c.condition() ? c.targetIfTrue : c.target;
+                if (scenes[state.location].onEnter) scenes[state.location].onEnter();
+                render();
+            };
+            choicesContainer.appendChild(btn);
+        });
+
+        updateInventoryUI();
+    }
+
+    function renderKeypad(scene) {
+        const puzzleArea = document.getElementById('puzzle-area');
+        puzzleArea.innerHTML = `
+            <div class="text-center font-mono text-2xl tracking-widest mb-4 p-2 bg-black border border-slate-700">
+                ${state.puzzleInput.padEnd(4, '_')}
+            </div>
+            <div class="keypad">
+                ${[1,2,3,4,5,6,7,8,9,'C',0,'OK'].map(key => `
+                    <div class="key hover:bg-slate-700 active:bg-slate-600" onclick="handleKey('${key}', '${scene.solution}')">${key}</div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    window.handleKey = (key, solution) => {
+        if (key === 'C') state.puzzleInput = "";
+        else if (key === 'OK') {
+            if (state.puzzleInput === solution) {
+                const scene = scenes[state.location];
+                if (scene.onSolve) scene.onSolve();
+                state.puzzleInput = "";
+                alert("¡CLACK! La caja se abre.");
+                state.location = "estudio";
+                render();
+            } else {
+                alert("Código incorrecto");
+                state.puzzleInput = "";
+            }
+        } else {
+            if (state.puzzleInput.length < 4) state.puzzleInput += key;
+        }
+        render();
+    };
+
+    function addItem(item) {
+        state.inventory.add(item);
+        updateInventoryUI();
+    }
+
+    function updateInventoryUI() {
+        const inv = document.getElementById('inventory');
+        inv.innerHTML = '';
+        state.inventory.forEach(item => {
+            const dot = document.createElement('div');
+            dot.className = "w-8 h-8 bg-amber-600/30 border border-amber-500 rounded-full flex items-center justify-center text-xs";
+            dot.innerHTML = item === "Testamento Real" ? "📜" : "🗝️";
+            dot.title = item;
+            inv.appendChild(dot);
+        });
+    }
+
+    function resetGame() {
+        state.inventory = new Set();
+        state.flags = { cajaFuerteAbierta: false, mayordomoInterrogado: false, vistoCuchillo: false };
+        state.location = "vestibulo";
+    }
+
+    // Efecto de Lluvia Dinámica
+    function createRain() {
+        const rainLayer = document.getElementById('rain-layer');
+        for (let i = 0; i < 50; i++) {
+            const drop = document.createElement('div');
+            drop.className = 'drop';
+            drop.style.left = Math.random() * 100 + 'vw';
+            drop.style.animationDuration = (Math.random() * 0.5 + 0.5) + 's';
+            drop.style.animationDelay = Math.random() * 2 + 's';
+            rainLayer.appendChild(drop);
+        }
+    }
+
+    window.onload = () => {
+        createRain();
+        render();
+    };
+</script>
+</body>
+</html>
