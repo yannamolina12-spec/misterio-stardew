@@ -1,122 +1,203 @@
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-    font-family: 'Courier New', monospace;
-    background: linear-gradient(135deg, #2c1810, #4a2c1a);
-    overflow: hidden;
-    image-rendering: pixelated;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  font-family: 'Courier New', monospace;
+  color: #f0e6d2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  overflow: hidden;
 }
 
-.game-container {
-    position: relative;
-    max-width: 1200px;
-    margin: 0 auto;
-    border: 4px solid #8B4513;
-    box-shadow: 0 0 30px rgba(139, 69, 19, 0.5);
+#game-container {
+  position: relative;
+  width: 640px;
+  height: 480px;
+  border: 6px solid #8b4513;
+  border-radius: 8px;
+  box-shadow: 0 0 40px rgba(139, 69, 19, 0.6);
+  overflow: hidden;
 }
 
-#gameCanvas {
-    display: block;
-    background: #1a0f0a;
-    image-rendering: pixelated;
-    image-rendering: -moz-crisp-edges;
-    image-rendering: crisp-edges;
+canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+  background: #2c1810;
 }
 
-.ui {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    color: #f4e4bc;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(26, 26, 46, 0.96);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  text-align: center;
+  z-index: 10;
 }
 
-.inventory {
-    background: rgba(0,0,0,0.8);
-    padding: 15px;
-    border: 3px solid #8B4513;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    min-width: 200px;
+.overlay h1 {
+  color: #ffd700;
+  font-size: 26px;
+  margin-bottom: 20px;
+  text-shadow: 3px 3px 0 #000;
 }
 
-.inventory h3 {
-    color: #d4af37;
-    margin-bottom: 10px;
-    font-size: 16px;
+.overlay .story {
+  margin-bottom: 20px;
+  line-height: 1.7;
+  font-size: 14px;
 }
 
-#inventoryItems {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
+.controls {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 12px;
+  line-height: 1.8;
+  border: 1px solid #ffd700;
 }
 
-.inventory-item {
-    width: 32px;
-    height: 32px;
-    border: 2px solid #d4af37;
-    background: #333;
-    cursor: pointer;
-    transition: all 0.2s;
+button {
+  background: #8b4513;
+  color: #f0e6d2;
+  border: 2px solid #ffd700;
+  padding: 12px 22px;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  margin: 5px;
+  transition: all 0.15s;
+  border-radius: 4px;
 }
 
-.inventory-item:hover {
-    border-color: #ffd700;
-    box-shadow: 0 0 10px #ffd700;
+button:hover {
+  background: #a0522d;
+  transform: scale(1.04);
 }
 
-.dialogue {
-    background: rgba(0,0,0,0.9);
-    padding: 20px;
-    border: 3px solid #654321;
-    border-radius: 12px;
-    max-width: 400px;
-    min-height: 100px;
+#hud {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 4;
 }
 
-#dialogueText {
-    font-size: 18px;
-    line-height: 1.4;
-    margin-bottom: 15px;
-    color: #f0e68c;
+#location,
+#inventory {
+  background: rgba(0, 0, 0, 0.72);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  border: 1px solid #ffd700;
+  max-width: 300px;
 }
 
-.dialogue-option {
-    background: #3c2f2f;
-    color: #f4e4bc;
-    border: 2px solid #8B4513;
-    padding: 10px 15px;
-    margin: 5px 0;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: all 0.3s;
-    font-family: inherit;
+#dialog-box {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  background: rgba(26, 26, 46, 0.96);
+  border: 3px solid #ffd700;
+  padding: 14px 18px;
+  border-radius: 4px;
+  z-index: 5;
+  cursor: pointer;
 }
 
-.dialogue-option:hover {
-    background: #8B4513;
-    border-color: #d4af37;
-    transform: translateY(-2px);
+#dialog-text {
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 6px;
 }
 
-.status {
-    margin-top: 15px;
-    padding: 10px;
-    background: rgba(0,0,0,0.7);
-    border-radius: 6px;
-    font-size: 14px;
+.continue-hint {
+  font-size: 10px;
+  color: #aaa;
+  text-align: right;
 }
 
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+#puzzle-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 8;
 }
 
-.puzzle-active {
-    animation: pulse 1s infinite;
+#puzzle-content {
+  background: #2c1810;
+  border: 4px solid #ffd700;
+  padding: 26px;
+  border-radius: 8px;
+  text-align: center;
+  max-width: 420px;
+}
+
+#puzzle-content h2 {
+  color: #ffd700;
+  margin-bottom: 10px;
+  font-size: 20px;
+}
+
+#puzzle-content p {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.hint-text {
+  font-size: 11px;
+  color: #aaa;
+  font-style: italic;
+}
+
+.puzzle-input {
+  padding: 10px;
+  font-size: 22px;
+  width: 180px;
+  margin: 10px;
+  background: #1a1a2e;
+  color: #ffd700;
+  border: 2px solid #ffd700;
+  text-align: center;
+  font-family: inherit;
+  border-radius: 4px;
+}
+
+.feedback {
+  margin-top: 10px;
+  color: #ff6b6b;
+  font-size: 13px;
+  min-height: 18px;
+}
+
+.feedback.success {
+  color: #6bff6b;
+}
+
+.hidden {
+  display: none !important;
 }
