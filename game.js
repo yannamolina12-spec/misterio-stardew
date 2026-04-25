@@ -1,6 +1,7 @@
 // ================================================================
 // EL MISTERIO DE LA MANSIÓN VALDEZ
-// Juego interactivo de misterio — estilo pixel art (Stardew-like)
+// Juego interactivo de misterio — pixel art estilo Stardew Valley
+// Versión móvil con controles táctiles
 // ================================================================
 
 // ---------- ELEMENTOS DEL DOM ----------
@@ -8,17 +9,19 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 
-const startScreen = document.getElementById('start-screen');
-const startBtn    = document.getElementById('start-btn');
-const muteBtn     = document.getElementById('mute-btn');
-const dialogBox   = document.getElementById('dialog-box');
-const dialogText  = document.getElementById('dialog-text');
+const startScreen   = document.getElementById('start-screen');
+const startBtn      = document.getElementById('start-btn');
+const muteBtn       = document.getElementById('mute-btn');
+const dialogBox     = document.getElementById('dialog-box');
+const dialogText    = document.getElementById('dialog-text');
 const puzzleOverlay = document.getElementById('puzzle-overlay');
 const puzzleContent = document.getElementById('puzzle-content');
-const locationEl  = document.getElementById('location');
-const inventoryEl = document.getElementById('inventory');
-const endScreen   = document.getElementById('end-screen');
-const endText     = document.getElementById('end-text');
+const locationEl    = document.getElementById('location');
+const inventoryEl   = document.getElementById('inventory');
+const endScreen     = document.getElementById('end-screen');
+const endText       = document.getElementById('end-text');
+const touchControls = document.getElementById('touch-controls');
+const actionBtn     = document.getElementById('action-btn');
 
 // ---------- ESTADO ----------
 const game = {
@@ -48,10 +51,12 @@ const player = {
   moving: false
 };
 
-const keys = {};
+// Dirección activa (tanto teclado como táctil)
+const input = {
+  up: false, down: false, left: false, right: false
+};
 
 // ---------- HABITACIONES ----------
-// Los objetos tienen: id, posición, tamaño, etiqueta, función para dibujar, y acción.
 const rooms = {
   entrada: {
     name: 'Entrada de la Mansión',
@@ -94,17 +99,14 @@ const rooms = {
 };
 
 // ================================================================
-// FUNCIONES PARA DIBUJAR OBJETOS (pixel art simple)
+// DIBUJAR OBJETOS (pixel art)
 // ================================================================
 function drawTable(o) {
-  ctx.fillStyle = '#4a2f1a';
-  ctx.fillRect(o.x, o.y, o.w, 12);
+  ctx.fillStyle = '#4a2f1a'; ctx.fillRect(o.x, o.y, o.w, 12);
   ctx.fillStyle = '#7a4a20';
   ctx.fillRect(o.x + 6, o.y + 12, 6, o.h - 12);
   ctx.fillRect(o.x + o.w - 12, o.y + 12, 6, o.h - 12);
-  // Nota sobre la mesa
-  ctx.fillStyle = '#f5f0dc';
-  ctx.fillRect(o.x + 30, o.y - 4, 30, 14);
+  ctx.fillStyle = '#f5f0dc'; ctx.fillRect(o.x + 30, o.y - 4, 30, 14);
   ctx.fillStyle = '#222';
   ctx.fillRect(o.x + 33, o.y - 1, 24, 2);
   ctx.fillRect(o.x + 33, o.y + 3, 18, 2);
@@ -112,14 +114,11 @@ function drawTable(o) {
 }
 
 function drawRug(o) {
-  ctx.fillStyle = '#8b2c2c';
-  ctx.fillRect(o.x, o.y, o.w, o.h);
-  ctx.strokeStyle = '#ffd700';
-  ctx.lineWidth = 2;
+  ctx.fillStyle = '#8b2c2c'; ctx.fillRect(o.x, o.y, o.w, o.h);
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
   ctx.strokeRect(o.x + 5, o.y + 5, o.w - 10, o.h - 10);
   ctx.fillStyle = '#ffd700';
   ctx.fillRect(o.x + o.w / 2 - 5, o.y + o.h / 2 - 5, 10, 10);
-  // Flecos
   ctx.fillStyle = '#d4af37';
   for (let i = 0; i < o.w; i += 8) {
     ctx.fillRect(o.x + i, o.y - 3, 4, 3);
@@ -128,10 +127,8 @@ function drawRug(o) {
 }
 
 function drawDoor(o) {
-  ctx.fillStyle = '#2a1500';
-  ctx.fillRect(o.x, o.y, o.w, o.h);
-  ctx.fillStyle = '#5a3a1a';
-  ctx.fillRect(o.x + 4, o.y + 4, o.w - 8, o.h - 8);
+  ctx.fillStyle = '#2a1500'; ctx.fillRect(o.x, o.y, o.w, o.h);
+  ctx.fillStyle = '#5a3a1a'; ctx.fillRect(o.x + 4, o.y + 4, o.w - 8, o.h - 8);
   ctx.fillStyle = '#3a1f0a';
   ctx.fillRect(o.x + 8, o.y + 12, o.w - 16, 16);
   ctx.fillRect(o.x + 8, o.y + o.h - 28, o.w - 16, 16);
@@ -140,183 +137,124 @@ function drawDoor(o) {
 }
 
 function drawPot(o) {
-  ctx.fillStyle = '#7a3a0a';
-  ctx.fillRect(o.x + 8, o.y + 30, o.w - 16, o.h - 30);
-  ctx.fillStyle = '#5a2a0a';
-  ctx.fillRect(o.x + 8, o.y + 30, o.w - 16, 4);
+  ctx.fillStyle = '#7a3a0a'; ctx.fillRect(o.x + 8, o.y + 30, o.w - 16, o.h - 30);
+  ctx.fillStyle = '#5a2a0a'; ctx.fillRect(o.x + 8, o.y + 30, o.w - 16, 4);
   ctx.fillStyle = '#2a6a2a';
-  ctx.beginPath();
-  ctx.arc(o.x + o.w / 2, o.y + 20, 18, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y + 20, 18, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#4a8a4a';
-  ctx.beginPath();
-  ctx.arc(o.x + o.w / 2 - 5, o.y + 15, 8, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.beginPath(); ctx.arc(o.x + o.w / 2 - 5, o.y + 15, 8, 0, Math.PI * 2); ctx.fill();
 }
 
 function drawBook(o) {
   const colors = { libro1: '#aa2222', libro2: '#2244aa', libro3: '#228844' };
-  ctx.fillStyle = '#3a2f1a';
-  ctx.fillRect(o.x - 6, o.y + o.h - 8, o.w + 12, 10);
-  ctx.fillStyle = colors[o.id] || '#aa2222';
-  ctx.fillRect(o.x, o.y, o.w, o.h);
+  ctx.fillStyle = '#3a2f1a'; ctx.fillRect(o.x - 6, o.y + o.h - 8, o.w + 12, 10);
+  ctx.fillStyle = colors[o.id] || '#aa2222'; ctx.fillRect(o.x, o.y, o.w, o.h);
   ctx.fillStyle = '#ffd700';
   ctx.fillRect(o.x + 6, o.y + 10, o.w - 12, 3);
   ctx.fillRect(o.x + 6, o.y + o.h - 14, o.w - 12, 3);
-  ctx.fillStyle = '#f5f0dc';
-  ctx.fillRect(o.x + o.w - 4, o.y + 4, 4, o.h - 8);
+  ctx.fillStyle = '#f5f0dc'; ctx.fillRect(o.x + o.w - 4, o.y + 4, 4, o.h - 8);
 }
 
 function drawClock(o) {
-  ctx.fillStyle = '#8b4513';
-  ctx.fillRect(o.x, o.y, o.w, o.h);
-  ctx.fillStyle = '#5a3a1a';
-  ctx.fillRect(o.x + 4, o.y + 4, o.w - 8, o.h - 8);
+  ctx.fillStyle = '#8b4513'; ctx.fillRect(o.x, o.y, o.w, o.h);
+  ctx.fillStyle = '#5a3a1a'; ctx.fillRect(o.x + 4, o.y + 4, o.w - 8, o.h - 8);
   ctx.fillStyle = '#f5f0dc';
-  ctx.beginPath();
-  ctx.arc(o.x + o.w / 2, o.y + o.h / 2, 22, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  // Números del 12, 3, 6, 9
-  ctx.fillStyle = '#000';
-  ctx.font = 'bold 8px Courier New';
-  ctx.textAlign = 'center';
+  ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y + o.h / 2, 22, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#000'; ctx.font = 'bold 8px Courier New'; ctx.textAlign = 'center';
   ctx.fillText('12', o.x + o.w / 2, o.y + o.h / 2 - 12);
   ctx.fillText('3',  o.x + o.w / 2 + 15, o.y + o.h / 2 + 3);
   ctx.fillText('6',  o.x + o.w / 2, o.y + o.h / 2 + 18);
   ctx.fillText('9',  o.x + o.w / 2 - 15, o.y + o.h / 2 + 3);
   ctx.textAlign = 'left';
-  // Manecillas apuntando a 3:07
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(o.x + o.w / 2, o.y + o.h / 2);
-  ctx.lineTo(o.x + o.w / 2 + 12, o.y + o.h / 2 + 2); // hora (3)
+  ctx.lineTo(o.x + o.w / 2 + 12, o.y + o.h / 2 + 2);
   ctx.moveTo(o.x + o.w / 2, o.y + o.h / 2);
-  ctx.lineTo(o.x + o.w / 2 + 5, o.y + o.h / 2 - 18); // minutos (cerca del 2, ~:07)
+  ctx.lineTo(o.x + o.w / 2 + 5, o.y + o.h / 2 - 18);
   ctx.stroke();
 }
 
 function drawPainting(o) {
-  ctx.fillStyle = '#5a3a1a';
-  ctx.fillRect(o.x, o.y, o.w, o.h);
-  ctx.fillStyle = '#3a1f0a';
-  ctx.fillRect(o.x + 4, o.y + 4, o.w - 8, o.h - 8);
-  ctx.fillStyle = '#8aa0d0';
-  ctx.fillRect(o.x + 8, o.y + 8, o.w - 16, o.h - 16);
-  // Mansión en el cuadro
-  ctx.fillStyle = '#3a3a3a';
-  ctx.fillRect(o.x + 24, o.y + 36, 42, 22);
+  ctx.fillStyle = '#5a3a1a'; ctx.fillRect(o.x, o.y, o.w, o.h);
+  ctx.fillStyle = '#3a1f0a'; ctx.fillRect(o.x + 4, o.y + 4, o.w - 8, o.h - 8);
+  ctx.fillStyle = '#8aa0d0'; ctx.fillRect(o.x + 8, o.y + 8, o.w - 16, o.h - 16);
+  ctx.fillStyle = '#3a3a3a'; ctx.fillRect(o.x + 24, o.y + 36, 42, 22);
   ctx.fillStyle = '#5a3a1a';
   ctx.beginPath();
   ctx.moveTo(o.x + 20, o.y + 36);
   ctx.lineTo(o.x + 45, o.y + 20);
   ctx.lineTo(o.x + 70, o.y + 36);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = '#ffd700';
-  ctx.fillRect(o.x + 40, o.y + 44, 6, 10);
-  // "1895"
-  ctx.fillStyle = '#222';
-  ctx.font = 'bold 10px Courier New';
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ffd700'; ctx.fillRect(o.x + 40, o.y + 44, 6, 10);
+  ctx.fillStyle = '#222'; ctx.font = 'bold 10px Courier New';
   ctx.fillText('1895', o.x + o.w - 34, o.y + o.h - 10);
 }
 
 function drawSafe(o) {
+  ctx.fillStyle = '#2a2a2a'; ctx.fillRect(o.x, o.y, o.w, o.h);
+  ctx.fillStyle = '#4a4a4a'; ctx.fillRect(o.x + 4, o.y + 4, o.w - 8, o.h - 8);
+  ctx.fillStyle = '#6a6a6a'; ctx.fillRect(o.x + 8, o.y + 8, o.w - 16, o.h - 16);
   ctx.fillStyle = '#2a2a2a';
-  ctx.fillRect(o.x, o.y, o.w, o.h);
-  ctx.fillStyle = '#4a4a4a';
-  ctx.fillRect(o.x + 4, o.y + 4, o.w - 8, o.h - 8);
-  ctx.fillStyle = '#6a6a6a';
-  ctx.fillRect(o.x + 8, o.y + 8, o.w - 16, o.h - 16);
-  // Combinación
-  ctx.fillStyle = '#2a2a2a';
-  ctx.beginPath();
-  ctx.arc(o.x + o.w / 2, o.y + o.h / 2, 12, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y + o.h / 2, 12, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#ffd700';
-  ctx.beginPath();
-  ctx.arc(o.x + o.w / 2, o.y + o.h / 2, 9, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y + o.h / 2, 9, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#000';
   ctx.fillRect(o.x + o.w / 2 - 1, o.y + o.h / 2 - 8, 2, 6);
-  // Manija
   ctx.fillStyle = '#ffd700';
   ctx.fillRect(o.x + o.w - 14, o.y + o.h / 2 - 2, 10, 4);
 }
 
 function drawDesk(o) {
-  ctx.fillStyle = '#4a2f1a';
-  ctx.fillRect(o.x, o.y, o.w, 10);
-  ctx.fillStyle = '#654321';
-  ctx.fillRect(o.x, o.y + 10, o.w, o.h - 10);
+  ctx.fillStyle = '#4a2f1a'; ctx.fillRect(o.x, o.y, o.w, 10);
+  ctx.fillStyle = '#654321'; ctx.fillRect(o.x, o.y + 10, o.w, o.h - 10);
   ctx.fillStyle = '#4a2f1a';
   ctx.fillRect(o.x + 10, o.y + 20, 30, 30);
   ctx.fillRect(o.x + 10, o.y + 22, 30, 2);
   ctx.fillRect(o.x + 10, o.y + 36, 30, 2);
-  // Papeles
   ctx.fillStyle = '#f5f0dc';
   ctx.fillRect(o.x + o.w - 40, o.y + 12, 25, 15);
   ctx.fillRect(o.x + o.w - 60, o.y + 14, 18, 12);
-  // Tintero
-  ctx.fillStyle = '#111';
-  ctx.fillRect(o.x + o.w - 18, o.y + 2, 8, 8);
+  ctx.fillStyle = '#111'; ctx.fillRect(o.x + o.w - 18, o.y + 2, 8, 8);
 }
 
 // ================================================================
-// JUGADOR (detective con sombrero, estilo pixel art)
+// JUGADOR (detective con sombrero)
 // ================================================================
 function drawPlayer() {
   const x = Math.floor(player.x - player.w / 2);
   const y = Math.floor(player.y - player.h);
 
-  // Sombra
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.beginPath();
-  ctx.ellipse(player.x, y + player.h, 11, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.beginPath(); ctx.ellipse(player.x, y + player.h, 11, 4, 0, 0, Math.PI * 2); ctx.fill();
 
-  // Piernas (animadas)
   const step = player.moving ? (player.frame % 2 === 0 ? 2 : -2) : 0;
   ctx.fillStyle = '#1a1a2a';
   ctx.fillRect(x + 6,  y + 26 + Math.max(0, step), 4, 6);
   ctx.fillRect(x + 14, y + 26 + Math.max(0, -step), 4, 6);
 
-  // Abrigo
-  ctx.fillStyle = '#3a3a5a';
-  ctx.fillRect(x + 4, y + 14, 16, 14);
-  ctx.fillStyle = '#5a5a7a';
-  ctx.fillRect(x + 4, y + 14, 16, 2);
-  // Botones
+  ctx.fillStyle = '#3a3a5a'; ctx.fillRect(x + 4, y + 14, 16, 14);
+  ctx.fillStyle = '#5a5a7a'; ctx.fillRect(x + 4, y + 14, 16, 2);
   ctx.fillStyle = '#ffd700';
   ctx.fillRect(x + 11, y + 18, 2, 2);
   ctx.fillRect(x + 11, y + 23, 2, 2);
 
-  // Brazos
   ctx.fillStyle = '#3a3a5a';
   ctx.fillRect(x + 1, y + 16, 4, 10);
   ctx.fillRect(x + 19, y + 16, 4, 10);
 
-  // Cabeza
-  ctx.fillStyle = '#f4c99a';
-  ctx.fillRect(x + 6, y + 4, 12, 12);
+  ctx.fillStyle = '#f4c99a'; ctx.fillRect(x + 6, y + 4, 12, 12);
 
-  // Sombrero de detective
   ctx.fillStyle = '#222';
   ctx.fillRect(x + 4, y, 16, 6);
   ctx.fillRect(x + 2, y + 5, 20, 2);
-  ctx.fillStyle = '#8b0000';
-  ctx.fillRect(x + 4, y + 5, 16, 1);
+  ctx.fillStyle = '#8b0000'; ctx.fillRect(x + 4, y + 5, 16, 1);
 
-  // Ojos según dirección
   ctx.fillStyle = '#000';
   if (player.dir === 'down') {
     ctx.fillRect(x + 8,  y + 10, 2, 2);
     ctx.fillRect(x + 14, y + 10, 2, 2);
-  } else if (player.dir === 'up') {
-    // mirando hacia arriba: sin ojos visibles
   } else if (player.dir === 'left') {
     ctx.fillRect(x + 7, y + 10, 2, 2);
   } else if (player.dir === 'right') {
@@ -334,10 +272,10 @@ function update() {
   }
 
   let dx = 0, dy = 0;
-  if (keys['ArrowUp']    || keys['w'] || keys['W']) { dy = -player.speed; player.dir = 'up'; }
-  else if (keys['ArrowDown']  || keys['s'] || keys['S']) { dy = player.speed;  player.dir = 'down'; }
-  else if (keys['ArrowLeft']  || keys['a'] || keys['A']) { dx = -player.speed; player.dir = 'left'; }
-  else if (keys['ArrowRight'] || keys['d'] || keys['D']) { dx = player.speed;  player.dir = 'right'; }
+  if (input.up)         { dy = -player.speed; player.dir = 'up'; }
+  else if (input.down)  { dy = player.speed;  player.dir = 'down'; }
+  else if (input.left)  { dx = -player.speed; player.dir = 'left'; }
+  else if (input.right) { dx = player.speed;  player.dir = 'right'; }
 
   player.moving = dx !== 0 || dy !== 0;
 
@@ -351,7 +289,6 @@ function update() {
     player.frame = 0;
   }
 
-  // Límites de la habitación (paredes)
   const newX = player.x + dx;
   const newY = player.y + dy;
   if (newX > 50 && newX < 590) player.x = newX;
@@ -360,6 +297,7 @@ function update() {
 
 // ---------- INTERACCIÓN ----------
 function interact() {
+  if (game.state === 'dialog') { showNextDialog(); return; }
   if (game.state !== 'playing') return;
 
   const room = rooms[game.currentRoom];
@@ -460,6 +398,7 @@ function handleAction(action, obj) {
           text: 'Un panel con números pide un código de 3 dígitos.',
           hint: 'Pista: los libros y el reloj hablaban de una hora específica.',
           answer: '307',
+          inputType: 'number',
           onSolve: () => {
             game.flags.estudioAbierto = true;
             showDialog([
@@ -498,6 +437,7 @@ function handleAction(action, obj) {
           text: 'La caja fuerte pide un código. La carta dice: "suma los dígitos del año del cuadro".',
           hint: 'Pista: el cuadro mostraba el año 1895. ¿Cuánto suma 1 + 8 + 9 + 5?',
           answer: '23',
+          inputType: 'number',
           onSolve: () => {
             game.flags.culpableDescubierto = true;
             endGame();
@@ -517,6 +457,16 @@ function changeRoom(roomId) {
   updateHUD();
 }
 
+// ---------- VISIBILIDAD DE CONTROLES TÁCTILES ----------
+function updateTouchControls() {
+  if (game.state === 'playing' || game.state === 'dialog') {
+    touchControls.classList.remove('hidden');
+  } else {
+    touchControls.classList.add('hidden');
+    input.up = input.down = input.left = input.right = false;
+  }
+}
+
 // ---------- DIÁLOGO ----------
 let dialogQueue = [];
 let dialogCallback = null;
@@ -525,6 +475,7 @@ function showDialog(lines, callback = null) {
   dialogQueue = [...lines];
   dialogCallback = callback;
   game.state = 'dialog';
+  updateTouchControls();
   showNextDialog();
 }
 
@@ -532,6 +483,7 @@ function showNextDialog() {
   if (dialogQueue.length === 0) {
     dialogBox.classList.add('hidden');
     game.state = 'playing';
+    updateTouchControls();
     if (dialogCallback) {
       const cb = dialogCallback;
       dialogCallback = null;
@@ -546,37 +498,42 @@ function showNextDialog() {
 // ---------- PUZZLE ----------
 function showPuzzle(puzzle) {
   game.state = 'puzzle';
+  updateTouchControls();
+  const inputMode = puzzle.inputType === 'number' ? 'numeric' : 'text';
   puzzleContent.innerHTML = `
     <h2>${puzzle.title}</h2>
     <p>${puzzle.text}</p>
     <p class="hint-text">${puzzle.hint}</p>
-    <input type="text" id="puzzle-input" class="puzzle-input" placeholder="?" autocomplete="off">
+    <input type="text" id="puzzle-input" class="puzzle-input"
+           placeholder="?" autocomplete="off"
+           inputmode="${inputMode}" pattern="[0-9]*">
     <div>
-      <button id="puzzle-submit">Enviar</button>
-      <button id="puzzle-cancel">Cancelar</button>
+      <button id="puzzle-submit">✓ Enviar</button>
+      <button id="puzzle-cancel">✗ Cancelar</button>
     </div>
     <div id="puzzle-feedback" class="feedback"></div>
   `;
   puzzleOverlay.classList.remove('hidden');
 
-  const input = document.getElementById('puzzle-input');
+  const inputEl = document.getElementById('puzzle-input');
   const feedback = document.getElementById('puzzle-feedback');
-  setTimeout(() => input.focus(), 50);
+  setTimeout(() => inputEl.focus(), 80);
 
   const submit = () => {
-    if (input.value.trim() === puzzle.answer) {
+    if (inputEl.value.trim() === puzzle.answer) {
       feedback.textContent = "✓ ¡Correcto!";
       feedback.className = "feedback success";
       setTimeout(() => {
         puzzleOverlay.classList.add('hidden');
         game.state = 'playing';
+        updateTouchControls();
         puzzle.onSolve();
       }, 700);
     } else {
       feedback.textContent = "✗ Incorrecto. Intenta de nuevo.";
       feedback.className = "feedback";
-      input.value = '';
-      input.focus();
+      inputEl.value = '';
+      inputEl.focus();
     }
   };
 
@@ -584,15 +541,17 @@ function showPuzzle(puzzle) {
   document.getElementById('puzzle-cancel').onclick = () => {
     puzzleOverlay.classList.add('hidden');
     game.state = 'playing';
+    updateTouchControls();
   };
-  input.addEventListener('keydown', (e) => {
+  inputEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') submit();
   });
 }
 
-// ---------- FIN DEL JUEGO ----------
+// ---------- FIN ----------
 function endGame() {
   game.state = 'end';
+  updateTouchControls();
   endText.innerHTML = `
     ¡La caja fuerte se abre!<br><br>
     Dentro encuentras la joya robada y otra carta firmada:<br>
@@ -615,11 +574,9 @@ function updateHUD() {
 function render() {
   const room = rooms[game.currentRoom];
 
-  // Suelo
   ctx.fillStyle = room.floor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Patrón del suelo (tablones)
   ctx.fillStyle = 'rgba(0,0,0,0.08)';
   for (let y = 0; y < canvas.height; y += 32) {
     ctx.fillRect(0, y, canvas.width, 1);
@@ -628,14 +585,12 @@ function render() {
     }
   }
 
-  // Paredes
   ctx.fillStyle = room.wall;
   ctx.fillRect(0, 0, canvas.width, 90);
   ctx.fillRect(0, 0, 40, canvas.height);
   ctx.fillRect(canvas.width - 40, 0, 40, canvas.height);
   ctx.fillRect(0, canvas.height - 30, canvas.width, 30);
 
-  // Detalle de ladrillos en pared superior
   ctx.fillStyle = 'rgba(0,0,0,0.28)';
   for (let y = 0; y < 90; y += 22) {
     ctx.fillRect(0, y, canvas.width, 1);
@@ -645,7 +600,6 @@ function render() {
     }
   }
 
-  // Ordenar objetos y jugador por Y para dar sensación de profundidad
   const drawables = [
     ...room.objects.map(o => ({ type: 'obj', obj: o, depth: o.y + o.h })),
     { type: 'player', depth: player.y }
@@ -655,23 +609,20 @@ function render() {
   for (const d of drawables) {
     if (d.type === 'obj') {
       d.obj.draw(d.obj);
-
       const cx = d.obj.x + d.obj.w / 2;
       const cy = d.obj.y + d.obj.h / 2;
       const dist = Math.hypot(player.x - cx, player.y - cy);
       if (dist < 55 && game.state === 'playing') {
-        // Resaltado
-        ctx.strokeStyle = '#ffd700';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
         ctx.strokeRect(d.obj.x - 2, d.obj.y - 2, d.obj.w + 4, d.obj.h + 4);
-        // Etiqueta
-        ctx.fillStyle = 'rgba(0,0,0,0.75)';
-        const labelW = ctx.measureText('[E] ' + d.obj.label).width + 12;
-        ctx.fillRect(cx - labelW / 2, d.obj.y - 20, labelW, 14);
+        const label = '[E] ' + d.obj.label;
+        ctx.font = 'bold 11px Courier New';
+        const labelW = ctx.measureText(label).width + 12;
+        ctx.fillStyle = 'rgba(0,0,0,0.78)';
+        ctx.fillRect(cx - labelW / 2, d.obj.y - 22, labelW, 16);
         ctx.fillStyle = '#ffd700';
-        ctx.font = '10px Courier New';
         ctx.textAlign = 'center';
-        ctx.fillText('[E] ' + d.obj.label, cx, d.obj.y - 10);
+        ctx.fillText(label, cx, d.obj.y - 10);
         ctx.textAlign = 'left';
       }
     } else {
@@ -679,7 +630,6 @@ function render() {
     }
   }
 
-  // Viñeta (oscurece los bordes para ambiente)
   const grad = ctx.createRadialGradient(
     canvas.width / 2, canvas.height / 2, 150,
     canvas.width / 2, canvas.height / 2, 400
@@ -697,7 +647,7 @@ function loop() {
 }
 
 // ================================================================
-// MÚSICA DE FONDO (generada con Web Audio API — chiptune misterioso)
+// MÚSICA (Web Audio API — chiptune procedural)
 // ================================================================
 let audioCtx = null;
 let masterGain = null;
@@ -713,7 +663,6 @@ function startMusic() {
   masterGain.gain.value = 0.09;
   masterGain.connect(audioCtx.destination);
 
-  // Melodía misteriosa en loop (estilo chiptune)
   const melody = [
     { f: 220.00, d: 0.4 }, { f: 246.94, d: 0.2 }, { f: 261.63, d: 0.4 },
     { f: 293.66, d: 0.2 }, { f: 261.63, d: 0.4 }, { f: 246.94, d: 0.4 },
@@ -741,24 +690,13 @@ function startMusic() {
   }
 
   function scheduleLoop() {
-    if (!musicEnabled) {
-      setTimeout(scheduleLoop, 500);
-      return;
-    }
+    if (!musicEnabled) { setTimeout(scheduleLoop, 500); return; }
     let t = audioCtx.currentTime + 0.05;
     const start = t;
-    // Melodía
-    for (const n of melody) {
-      playNote(n.f, n.d, 'square', 0.25, t);
-      t += n.d;
-    }
+    for (const n of melody) { playNote(n.f, n.d, 'square', 0.25, t); t += n.d; }
     const total = t - start;
-    // Bajo paralelo
     let bt = start;
-    for (const n of bass) {
-      playNote(n.f, n.d, 'triangle', 0.4, bt);
-      bt += n.d;
-    }
+    for (const n of bass) { playNote(n.f, n.d, 'triangle', 0.4, bt); bt += n.d; }
     setTimeout(scheduleLoop, total * 1000);
   }
 
@@ -766,43 +704,110 @@ function startMusic() {
 }
 
 // ================================================================
-// EVENTOS
+// INPUTS — TECLADO + TÁCTIL
 // ================================================================
+
+// ----- Teclado (para escritorio) -----
+const keyMap = {
+  'ArrowUp': 'up', 'w': 'up', 'W': 'up',
+  'ArrowDown': 'down', 's': 'down', 'S': 'down',
+  'ArrowLeft': 'left', 'a': 'left', 'A': 'left',
+  'ArrowRight': 'right', 'd': 'right', 'D': 'right'
+};
+
 window.addEventListener('keydown', (e) => {
-  keys[e.key] = true;
+  if (keyMap[e.key]) {
+    input[keyMap[e.key]] = true;
+    e.preventDefault();
+  }
   if (e.key === 'e' || e.key === 'E' || e.key === ' ') {
-    if (game.state === 'playing') {
-      e.preventDefault();
-      interact();
-    } else if (game.state === 'dialog') {
-      e.preventDefault();
-      showNextDialog();
-    }
+    e.preventDefault();
+    interact();
   }
 });
 window.addEventListener('keyup', (e) => {
-  keys[e.key] = false;
+  if (keyMap[e.key]) {
+    input[keyMap[e.key]] = false;
+  }
 });
 
+// ----- Controles táctiles (D-pad) -----
+function bindDpadButton(btn) {
+  const dir = btn.dataset.dir;
+
+  const press = (e) => {
+    e.preventDefault();
+    // Soltamos las otras direcciones para que no queden pegadas
+    input.up = input.down = input.left = input.right = false;
+    input[dir] = true;
+    btn.classList.add('pressed');
+  };
+  const release = (e) => {
+    if (e) e.preventDefault();
+    input[dir] = false;
+    btn.classList.remove('pressed');
+  };
+
+  btn.addEventListener('touchstart', press, { passive: false });
+  btn.addEventListener('touchend', release, { passive: false });
+  btn.addEventListener('touchcancel', release, { passive: false });
+  // También soporta ratón (para probar en PC)
+  btn.addEventListener('mousedown', press);
+  btn.addEventListener('mouseup', release);
+  btn.addEventListener('mouseleave', release);
+}
+
+document.querySelectorAll('.dpad-btn').forEach(bindDpadButton);
+
+// Botón de acción (E)
+const actionPress = (e) => {
+  e.preventDefault();
+  interact();
+};
+actionBtn.addEventListener('touchstart', actionPress, { passive: false });
+actionBtn.addEventListener('click', (e) => {
+  // En móviles touchstart ya disparó interact — en PC sí se usa click
+  if (e.detail !== 0) { // evitamos doble disparo cuando viene de Enter
+    // nada — touchstart ya lo maneja en móvil
+  }
+});
+// Para escritorio sin touch:
+actionBtn.addEventListener('mousedown', (e) => {
+  if (!('ontouchstart' in window)) {
+    e.preventDefault();
+    interact();
+  }
+});
+
+// Diálogo: tocar avanza
+dialogBox.addEventListener('click', () => {
+  if (game.state === 'dialog') showNextDialog();
+});
+dialogBox.addEventListener('touchstart', (e) => {
+  if (game.state === 'dialog') { e.preventDefault(); showNextDialog(); }
+}, { passive: false });
+
+// Evita que el navegador haga zoom o scroll al tocar el canvas
+canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+
+// ----- Botones principales -----
 startBtn.addEventListener('click', () => {
   startScreen.classList.add('hidden');
   game.state = 'playing';
   updateHUD();
+  updateTouchControls();
   try { startMusic(); } catch (e) { console.warn('Audio no disponible:', e); }
 });
 
 muteBtn.addEventListener('click', () => {
   musicEnabled = !musicEnabled;
   muteBtn.textContent = musicEnabled ? '🔊 Música: ON' : '🔇 Música: OFF';
-  if (masterGain) {
-    masterGain.gain.value = musicEnabled ? 0.09 : 0;
-  }
+  if (masterGain) masterGain.gain.value = musicEnabled ? 0.09 : 0;
 });
 
-dialogBox.addEventListener('click', () => {
-  if (game.state === 'dialog') showNextDialog();
-});
-
-// Inicio
+// ================================================================
+// INICIO
+// ================================================================
 updateHUD();
+updateTouchControls();
 loop();
