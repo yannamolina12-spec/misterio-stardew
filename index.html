@@ -2,7 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a1a2e">
   <title>El Misterio de la Mansión Valdez</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -10,34 +13,46 @@
   <div id="game-container">
     <canvas id="game" width="640" height="480"></canvas>
 
-    <!-- Pantalla de inicio -->
-    <div id="start-screen" class="overlay">
-      <h1>🔍 El Misterio de la Mansión Valdez</h1>
-      <p class="story">
-        Una joya muy valiosa ha sido robada de la mansión del Sr. Valdez.<br>
-        Tú eres el detective encargado del caso.<br>
-        Explora las habitaciones, encuentra pistas,<br>
-        resuelve los puzzles y descubre al culpable.
-      </p>
-      <div class="controls">
-        <p><strong>CONTROLES</strong></p>
-        <p>Flechas o WASD — Moverse</p>
-        <p>E o ESPACIO — Interactuar / Continuar</p>
-      </div>
-      <button id="start-btn">🎮 Comenzar investigación</button>
-      <button id="mute-btn">🔊 Música: ON</button>
-    </div>
-
     <!-- HUD -->
     <div id="hud">
       <div id="location">📍 —</div>
       <div id="inventory">🎒 vacío</div>
     </div>
 
+    <!-- Controles táctiles (aparecen solo cuando se está jugando) -->
+    <div id="touch-controls" class="hidden">
+      <div id="dpad">
+        <button class="dpad-btn dpad-up"    data-dir="up"    aria-label="Arriba">▲</button>
+        <button class="dpad-btn dpad-left"  data-dir="left"  aria-label="Izquierda">◀</button>
+        <button class="dpad-btn dpad-right" data-dir="right" aria-label="Derecha">▶</button>
+        <button class="dpad-btn dpad-down"  data-dir="down"  aria-label="Abajo">▼</button>
+      </div>
+      <button id="action-btn" aria-label="Interactuar">E</button>
+    </div>
+
+    <!-- Pantalla de inicio -->
+    <div id="start-screen" class="overlay">
+      <h1>🔍 El Misterio<br>de la Mansión Valdez</h1>
+      <p class="story">
+        Una joya valiosa fue robada de la mansión del Sr. Valdez.<br>
+        Tú eres el detective del caso.<br>
+        Explora, encuentra pistas, resuelve los puzzles
+        y descubre al culpable.
+      </p>
+      <div class="controls">
+        <p><strong>CONTROLES</strong></p>
+        <p>📱 D-pad táctil para moverse</p>
+        <p>🔘 Botón E para interactuar</p>
+        <p>💻 En PC: flechas/WASD y E/Espacio</p>
+      </div>
+      <button id="start-btn">🎮 Comenzar</button>
+      <button id="mute-btn">🔊 Música: ON</button>
+    </div>
+
     <!-- Diálogos -->
     <div id="dialog-box" class="hidden">
       <p id="dialog-text"></p>
-      <p class="continue-hint">▸ Presiona E o clic para continuar</p>
+      <p class="continue-hint">▸ Toca para continuar</p>
     </div>
 
     <!-- Puzzles -->
